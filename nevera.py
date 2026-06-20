@@ -2,35 +2,36 @@ import ollama
 
 print("🧠 === BIENVENIDO AL ASISTENTE DE COCINA IA ===")
 print("Escribe tus ingredientes o 'salir' para terminar el programa.")
-# exit_bool = False
+
+# 1. Definimos las reglas fijas del juego (El System Prompt)
+reglas_chef = (
+    "Actúas como un chef robot ultra-estricto. "
+    "Tu misión es dar una receta usando ÚNICAMENTE los ingredientes que te pase el usuario. "
+    "Está totalmente prohibido añadir ingredientes extra (ni sal, ni aceite, ni especias, ni embutidos). "
+    "Si no se puede hacer nada comestible con lo que te dan, di textualmente: 'No se puede cocinar nada seguro'."
+)
+
 while True:
     print("\n" + "=" * 30)
-
-    # 1. Aquí el programa se para y espera a que tú escribas.
-    # Lo que escribas se guardará dentro de la variable 'mis_ingredientes'
-    user_input = input("Qué tienes en la nevera hoy?")
-    # comprobacion si ha puesto salir
+    user_input = input("Qué ingredientes tienes hoy?")
     if user_input.lower() == "salir":
         print("\n Hasta luego! Gracias por usar el chef IA.")
-        break # el comando break rompe el bucle y sale del programa
-    # 2. Creamos las instrucciones uniendo tu texto con la petición para el chef")
-    instrucciones = f"Actúa como un chef. Dame una receta rápida usando estrictamente estos ingredientes: {user_input}"
+        break   
 
-    print("\n⏳ El chef de Ollama (Qwen) está pensando... (tardará unos 30 segundos)")
+    print("\n⏳ El chef estricto está calculando...")
 
-    # 3. Llamamos a tu modelo ganador de ayer
-    try:      
+    try:
+        # 2. Ahora enviamos una LISTA de mensajes organizada por roles
         respuesta = ollama.chat(
-            model='qwen2.5-coder:1.5b', # Tu modelo ganador
+            model='qwen2.5-coder:1.5b',
             messages=[
-                {'role': 'user', 'content': instrucciones} # Tu pregunta}
+                # primero le fijamos la personalidad y las prohibiciones
+                {'role': 'system', 'content': reglas_chef},
+                # Luego le pasamos tus ingredientes actuales
+                {'role': 'user', 'content': f"Mis ingredientes son {user_input}."}
             ]
         )
-        # 4. Mostramos el resultado limpio
         print("\n👨‍🍳 MENÚ PROPUESTO:")
         print(respuesta['message']['content'])
     except Exception as e:
-        # por si falla la ejecucion
-        print(f"Error al conectar con Ollama. Error: {e}")
-
-    #aqui vuelve al principio o si has puesto salir sale
+        print(f"Error al conectar con Ollama. Error: {e}") 
