@@ -62,10 +62,12 @@ python nevera.py
 
 ```text
 proyecto-nevera-ia/
-├── nevera.py        # Script principal
-├── .env             # Claves de API (no incluido en el repo)
+├── nevera.py         # Script principal
+├── images/           # Imágenes de la nevera usadas en la versión multimodal
+├── requirements.txt  # Lista de dependencias
+├── README.md
 ├── .gitignore
-└── README.md
+└── .env              # Claves de API (no incluido en el repo)
 ```
 
 ---
