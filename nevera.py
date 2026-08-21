@@ -17,6 +17,7 @@ class Plato(BaseModel):
     tipo_comida: str = Field(description="Desayuno, Almuerzo o Cena")
     tiempo_preparacion_minutos: int = Field(description="Tiempo estimado de preparación en minutos")
     dificultad: str = Field(description="Baja, Media o Alta")
+    #raciones: int = Field(default=2, description="Número de personas para las que está calculada la receta")
     ingredientes_usados: List[str] = Field(description="Ingredientes de la lista confirmada o despensa usados")
     pasos: List[str] = Field(description="Pasos cronológicos de preparación")
 
@@ -72,6 +73,45 @@ def generar_receta_con_filtros(ingredientes_texto, despensa, dieta, tiempo_cocin
             )
             # Convertimos la respuesta JSON a un objeto Python tipado
             return MenuCompleto.model_validate_json(respuesta.text)
+        except Exception as e:
+            if "503" in str(e) and intento < intentos - 1:
+                time.sleep(2)
+                continue
+            return None
+
+# FASE 3: Modificar un plato individual manteniendo el esquema
+def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_disponibles: str, despensa: str, intentos=3):
+    if not client:
+        return None
+
+    reglas_chef = f"""Actúas como un chef robot.
+    Tu tarea es MODIFICAR un único plato existente siguiendo la petición del usuario.
+    
+    Reglas estrictas:
+    - Mantén la coherencia con los ingredientes disponibles confirmados: {ingredientes_disponibles}
+    - Ingredientes básicos de despensa: {despensa}
+    - Aplica la instrucción solicitada por el usuario de forma precisa."""
+
+    prompt = f"""Plato actual (formato JSON):
+    {plato_actual.model_dump_json(indent=2)}
+
+    Instrucción de cambio del usuario:
+    "{instruccion_cambio}"
+
+    Devuelve el plato modificado en el mismo formato estructurado."""
+
+    for intento in range(intentos):
+        try:
+            respuesta = client.models.generate_content(
+                model='gemini-2.5-flash',
+                config=types.GenerateContentConfig(
+                    system_instruction=reglas_chef,
+                    response_mime_type="application/json",
+                    response_schema=Plato,  # Forzamos a devolver un único objeto Plato
+                ),
+                contents=[prompt]
+            )
+            return Plato.model_validate_json(respuesta.text)
         except Exception as e:
             if "503" in str(e) and intento < intentos - 1:
                 time.sleep(2)

@@ -1,6 +1,8 @@
 import streamlit as st
+import urllib.parse
+# from urllib.parse import quote_plus
 from PIL import Image
-from nevera import identificar_ingredientes, generar_receta_con_filtros, MenuCompleto
+from nevera import identificar_ingredientes, generar_receta_con_filtros, modificar_plato, MenuCompleto, Plato
 
 st.set_page_config(page_title="Asistente de Nevera IA", page_icon="🍳", layout="wide")
 
@@ -84,19 +86,67 @@ if archivos_subidos:
             st.info(f"🤖 **Diagnóstico del Chef:** {menu.observaciones_chef}")
 
         # Renderizado en tarjetas estructuradas
-        for plato in menu.platos:
+        for idx, plato in enumerate(menu.platos):
             with st.container(border=True):
                 col1, col2 = st.columns([3, 1])
                 with col1:
                     st.subheader(f"{plato.tipo_comida}: {plato.nombre}")
                 with col2:
                     st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}**")
-                
-                # st.write("**Ingredientes usados:**", ", ".join(plato.ingredientes_usados))
+                    #st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}** | 👥 **{plato.raciones} pers.**")
+
                 st.write("**Ingredientes usados:** " + " ".join(f"`{ing}`" for ing in plato.ingredientes_usados))
                 st.write("**Instrucciones de preparación:**")
                 for i, paso in enumerate(plato.pasos, 1):
                     st.write(f"{i}. {paso}")
+                
+                # Botón de YouTube
+                query = urllib.parse.quote_plus(f"receta {plato.nombre}")
+                url_youtube = f"https://www.youtube.com/results?search_query={query}"
+                st.link_button("🎥 Ver recetas similares en YouTube", url_youtube)
+
+                # Editor dinámico por plato
+                with st.expander("✏️ Solicitar un cambio en este plato"):
+                    cambio_texto = st.text_input(
+                        "¿Qué quieres cambiar?",
+                        placeholder="Ej: Cambia las salchichas por huevo, hazlo sin sartén...",
+                        key=f"input_cambio_{idx}"
+                    )
+                    if st.button("Aplicar cambio a este plato", key=f"btn_cambio_{idx}"):
+                        if cambio_texto.strip():
+                            with st.spinner("Modificando este plato con el chef robot..."):
+                                plato_modificado = modificar_plato(
+                                    plato_actual=plato,
+                                    instruccion_cambio=cambio_texto,
+                                    ingredientes_disponibles=st.session_state.get('ingredientes', ''),
+                                    despensa=despensa
+                                )
+                                if plato_modificado:
+                                    st.session_state['menu_objeto'].platos[idx] = plato_modificado
+                                    st.rerun()
+                                else:
+                                    st.error("No se pudo aplicar el cambio. Inténtalo de nuevo.")
+                        else:
+                            st.warning("Escribe qué cambio deseas antes de pulsar el botón.")
+        # for plato in menu.platos:
+        #     with st.container(border=True):
+        #         col1, col2 = st.columns([3, 1])
+        #         with col1:
+        #             st.subheader(f"{plato.tipo_comida}: {plato.nombre}")
+        #         with col2:
+        #             st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}**")
+                
+        #         # st.write("**Ingredientes usados:**", ", ".join(plato.ingredientes_usados))
+        #         st.write("**Ingredientes usados:** " + " ".join(f"`{ing}`" for ing in plato.ingredientes_usados))
+        #         st.write("**Instrucciones de preparación:**")
+        #         for i, paso in enumerate(plato.pasos, 1):
+        #             st.write(f"{i}. {paso}")
+
+        #         # --- BOTÓN YOUTUBE ---
+        #         # query = urllib.parse.quote(f"receta {plato.nombre}")
+        #         query = urllib.parse.quote_plus(f"receta {plato.nombre}")
+        #         url_youtube = f"https://www.youtube.com/results?search_query={query}"
+        #         st.link_button("🎥 Ver recetas similares en YouTube", url_youtube)
 
         # Preparación de datos para la descarga (JSON o Markdown)
         st.markdown("---")
