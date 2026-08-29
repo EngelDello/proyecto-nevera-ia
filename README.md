@@ -1,6 +1,6 @@
 # Proyecto Nevera IA
 
-Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes que tienes en casa a partir de fotos y propone un menú personalizado, con corrección manual de la lista detectada y filtros de dieta, tiempo y despensa. El proyecto evoluciona de forma incremental desde un modelo local hasta una arquitectura en la nube con visión artificial, salida estructurada en JSON e interfaz web interactiva.
+Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes que tienes en casa a partir de fotos y propone un menú personalizado, con corrección manual de la lista detectada, filtros de dieta/tiempo/despensa, modificación dinámica de platos individuales, enlaces a recetas en vídeo y exportación del menú en PDF, JSON o Markdown. El proyecto evoluciona de forma incremental desde un modelo local hasta una arquitectura en la nube con visión artificial, salida estructurada en JSON e interfaz web interactiva.
 
 ---
 
@@ -16,10 +16,11 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 | v6 | Interfaz web con Streamlit: flujo en dos fases (detección editable + generación de menú), filtros en barra lateral y reintento ante saturación (503). | Streamlit + Gemini 2.5 Flash API |
 | v7 | Salida estructurada estricta (JSON) mediante esquemas **Pydantic**, renderizado dinámico en tarjetas con badges y descarga dual (JSON/MD). | Pydantic + Gemini 2.5 Flash (`Structured Outputs`) |
 | v8 | Interacción dinámica por plato (sustitución de ingredientes y cambios específicos sin regenerar todo el menú) y enlaces directos a vídeos de YouTube. | Pydantic + Gemini 2.5 Flash (`modificar_plato`) + Streamlit Expander |
+| v9 | Exportación del menú completo a PDF maquetado con `fpdf2`, sanitización de caracteres y descarga directa. | fpdf2 + Streamlit Download Button |
 
 ---
 
-## Cómo funciona (v8)
+## Cómo funciona (v9)
 
 1. **Subida multimodal:** Subes una o varias fotos de tu nevera y despensa desde el navegador.
 2. **Fase 1 — Escaneo:** Gemini analiza las imágenes y devuelve una lista categorizada de todos los ingredientes detectados.
@@ -27,7 +28,10 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 4. **Fase 2 — Menú estructurado en JSON:** Con la lista confirmada y los filtros seleccionados (dieta, tiempo y despensa básica), Gemini genera un objeto validado por Pydantic con diagnóstico del chef, tiempos de cocción, dificultad, ingredientes e instrucciones detalladas.
 5. **Visualización y búsqueda multimedia:** Cada receta se dibuja en una tarjeta independiente con etiquetas (*badges*) para los ingredientes y un botón directo con búsqueda optimizada en YouTube.
 6. **Fase 3 — Modificación interactiva (Re-prompting granular):** Cada tarjeta incluye un desplegable para solicitar ajustes específicos (sustituir ingredientes, adaptar tiempos o técnicas). La app consulta a Gemini enviando únicamente el JSON de ese plato y actualiza la tarjeta al instante sin alterar las demás.
-7. **Descarga dual:** Permite exportar el menú completo en formato estructurado (`.json`) o en texto maquetado (`.md`).
+7. **Descarga triple:** Permite exportar el menú completo en tres formatos independientes:
+   - **PDF:** Documento maquetado y listo para imprimir o consultar en móvil.
+   - **JSON:** Estructura tipada con metadatos para integración técnica.
+   - **Markdown:** Formato de texto limpio compatible con gestores de notas.
 
 ---
 
@@ -36,7 +40,8 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 - Python 3
 - [Streamlit](https://streamlit.io/) — interfaz web interactiva
 - [Pydantic](https://docs.pydantic.dev/) — validación de esquemas y marcado de salidas estructuradas en JSON
-- [Google Generative AI SDK](https://ai.google.dev/) — integración con Gemini 2.5 Flash (`response_schema`)
+- [Google Generative AI SDK](https://ai.google.dev/) — integración multimodal con Gemini 2.5 Flash (`response_schema`)
+- [fpdf2](https://py-pdf.github.io/fpdf2/) — generación y maquetación de documentos PDF
 - Pillow — procesamiento de imágenes
 - python-dotenv — gestión de variables de entorno
 - Git & GitHub
@@ -71,8 +76,8 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 - [x] Reintento automático ante errores temporales de la API (503 / alta demanda)
 - [x] Interacción real: sustitución de ingredientes, ajuste de raciones
 - [x] Búsqueda de vídeos de YouTube relacionados con la receta
+- [x] Descarga del menú también en PDF
 - [ ] Ajuste dinámico de raciones con cantidades estructuradas (gramos/unidades)
-- [ ] Descarga del menú también en PDF
 - [ ] Generación de imagen del plato final
 - [ ] Despliegue en la nube (Streamlit Community Cloud o similar)
 
@@ -95,4 +100,4 @@ proyecto-nevera-ia/
 
 ## Objetivo
 
-Proyecto de aprendizaje progresivo para explorar el ecosistema de IA generativa con Python: modelos locales, APIs multimodales, prompt engineering, esquemas Pydantic para structured outputs, interfaces web y arquitectura limpia.
+Proyecto de aprendizaje progresivo para explorar el ecosistema de IA generativa con Python: modelos locales, APIs multimodales, prompt engineering, esquemas Pydantic para structured outputs, re-prompting granular, generación documental (PDF), interfaces web y arquitectura limpia.

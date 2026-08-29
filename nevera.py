@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+import unicodedata
+from fpdf import FPDF
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -117,3 +119,76 @@ def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_d
                 time.sleep(2)
                 continue
             return None
+
+def limpiar_texto_pdf(texto: str) -> str:
+    """Sanea el texto eliminando caracteres tipográficos incompatibles con Latin-1."""
+    if not texto:
+        return ""
+    reemplazos = {
+        '“': '"', '”': '"', '‘': "'", '’': "'",
+        '—': '-', '–': '-', '…': '...', '•': '*'
+    }
+    for orig, nuevo in reemplazos.items():
+        texto = texto.replace(orig, nuevo)
+    # Conserva caracteres españoles estándar (tildes, ñ) y descarta caracteres no soportados
+    return texto.encode('latin-1', 'replace').decode('latin-1')
+
+class PDFMenu(FPDF):
+    def header(self):
+        self.set_font('Helvetica', 'B', 16)
+        self.cell(0, 10, 'Menú Sugerido - Nevera IA', border=False, align='C')
+        self.ln(12)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 10, f'Página {self.page_no()}', align='C')
+
+def generar_pdf_menu(menu: MenuCompleto) -> bytes:
+    pdf = PDFMenu()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.ln(4)  # Separa el contenido del encabezado
+    
+    # Ancho efectivo de la página (evita cualquier error de espacio horizontal)
+    ancho_util = pdf.epw
+    
+    # Diagnóstico del chef
+    if menu.observaciones_chef:
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(ancho_util, 7, 'Diagnostico del Chef:', new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font('Helvetica', '', 10)
+        pdf.multi_cell(ancho_util, 5, limpiar_texto_pdf(menu.observaciones_chef))
+        pdf.ln(4)
+
+    # Platos
+    for plato in menu.platos:
+        # Título del plato
+        pdf.set_font('Helvetica', 'B', 13)
+        pdf.cell(ancho_util, 8, limpiar_texto_pdf(f"{plato.tipo_comida}: {plato.nombre}"), new_x="LMARGIN", new_y="NEXT")
+        
+        # Metadatos
+        pdf.set_font('Helvetica', 'I', 9)
+        pdf.cell(ancho_util, 5, limpiar_texto_pdf(f"Tiempo: {plato.tiempo_preparacion_minutos} min  |  Dificultad: {plato.dificultad}"), new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+        
+        # Ingredientes
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(ancho_util, 6, "Ingredientes:", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font('Helvetica', '', 9)
+        pdf.multi_cell(ancho_util, 5, limpiar_texto_pdf(", ".join(plato.ingredientes_usados)))
+        pdf.ln(2)
+        
+        # Pasos
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(ancho_util, 6, "Instrucciones de preparacion:", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font('Helvetica', '', 9)
+        for i, paso in enumerate(plato.pasos, 1):
+            pdf.multi_cell(ancho_util, 5, limpiar_texto_pdf(f"{i}. {paso}"))
+            pdf.ln(1)
+        
+        pdf.ln(4)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+        pdf.ln(4)
+
+    return bytes(pdf.output())

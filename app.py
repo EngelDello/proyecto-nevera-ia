@@ -2,8 +2,14 @@ import streamlit as st
 import urllib.parse
 # from urllib.parse import quote_plus
 from PIL import Image
-from nevera import identificar_ingredientes, generar_receta_con_filtros, modificar_plato, MenuCompleto, Plato
-
+from nevera import (
+    identificar_ingredientes, 
+    generar_receta_con_filtros, 
+    modificar_plato, 
+    generar_pdf_menu, 
+    MenuCompleto, 
+    Plato
+)
 st.set_page_config(page_title="Asistente de Nevera IA", page_icon="🍳", layout="wide")
 
 st.title("🍳 Asistente de Cocina IA (Multimodal)")
@@ -148,21 +154,21 @@ if archivos_subidos:
         #         url_youtube = f"https://www.youtube.com/results?search_query={query}"
         #         st.link_button("🎥 Ver recetas similares en YouTube", url_youtube)
 
-        # Preparación de datos para la descarga (JSON o Markdown)
+        # Preparación de descargas (JSON, Markdown, PDF)
         st.markdown("---")
-        col_dl1, col_dl2 = st.columns(2)
+        col_dl1, col_dl2, col_dl3 = st.columns(3)
         
-        # Opción 1: Descargar JSON crudo
+        # 1. JSON
         json_data = menu.model_dump_json(indent=2)
         col_dl1.download_button(
-            label="📥 Descargar Menú (JSON)",
+            label="📥 Descargar (JSON)",
             data=json_data,
             file_name="menu_nevera.json",
             mime="application/json",
             use_container_width=True
         )
 
-        # Opción 2: Descargar formato Markdown generado a partir del objeto
+        # 2. Markdown
         md_text = f"# Menú Sugerido por Chef Robot\n\n**Observaciones:** {menu.observaciones_chef}\n\n"
         for p in menu.platos:
             md_text += f"## {p.tipo_comida}: {p.nombre}\n"
@@ -175,9 +181,19 @@ if archivos_subidos:
             md_text += "\n---\n"
 
         col_dl2.download_button(
-            label="📄 Descargar Menú (Markdown)",
+            label="📄 Descargar (Markdown)",
             data=md_text,
             file_name="menu_nevera.md",
             mime="text/markdown",
+            use_container_width=True
+        )
+
+        # 3. PDF
+        pdf_bytes = generar_pdf_menu(menu)
+        col_dl3.download_button(
+            label="📕 Descargar (PDF)",
+            data=pdf_bytes,
+            file_name="menu_nevera.pdf",
+            mime="application/pdf",
             use_container_width=True
         )
