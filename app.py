@@ -1,6 +1,5 @@
 import streamlit as st
-import urllib.parse
-# from urllib.parse import quote_plus
+from urllib.parse import quote_plus
 from PIL import Image
 from nevera import (
     identificar_ingredientes, 
@@ -8,8 +7,10 @@ from nevera import (
     modificar_plato, 
     generar_pdf_menu, 
     MenuCompleto, 
-    Plato
+    Plato,
+    IngredienteReceta
 )
+
 st.set_page_config(page_title="Asistente de Nevera IA", page_icon="🍳", layout="wide")
 
 st.title("🍳 Asistente de Cocina IA (Multimodal)")
@@ -74,7 +75,7 @@ if archivos_subidos:
         
         # PASO 3: GENERAR RECETA EN JSON
         if st.button("🍳 2. Generar Menú con Lista Confirmada"):
-            with st.spinner("El chef robot está estructurando tu menú personalizado..."):
+            with st.spinner("El chef robot está calculando ingredientes y porciones estructuradas..."):
                 menu_objeto = generar_receta_con_filtros(ingredientes_editados, despensa, dieta, tiempo)
                 if menu_objeto:
                     st.session_state['menu_objeto'] = menu_objeto
@@ -94,38 +95,58 @@ if archivos_subidos:
         # Renderizado en tarjetas estructuradas
         for idx, plato in enumerate(menu.platos):
             with st.container(border=True):
-                col1, col2 = st.columns([3, 1])
+                col1, col2 = st.columns([3, 2])
                 with col1:
                     st.subheader(f"{plato.tipo_comida}: {plato.nombre}")
                 with col2:
-                    st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}**")
-                    #st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}** | 👥 **{plato.raciones} pers.**")
+                    st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}** | 👥 **{plato.raciones} pers.**")
+                
+                # Lista de ingredientes con cantidades orientativas
+                st.write("**Ingredientes usados (cantidades orientativas):**")
+                cols_ing = st.columns(2)
+                for i, ing in enumerate(plato.ingredientes_usados):
+                    col_target = cols_ing[i % 2]
+                    col_target.markdown(f"• **{ing.cantidad}** — {ing.nombre}")
 
-                st.write("**Ingredientes usados:** " + " ".join(f"`{ing}`" for ing in plato.ingredientes_usados))
+                st.write("")
                 st.write("**Instrucciones de preparación:**")
                 for i, paso in enumerate(plato.pasos, 1):
                     st.write(f"{i}. {paso}")
                 
                 # Botón de YouTube
-                query = urllib.parse.quote_plus(f"receta {plato.nombre}")
+                query = quote_plus(f"receta {plato.nombre}")
                 url_youtube = f"https://www.youtube.com/results?search_query={query}"
                 st.link_button("🎥 Ver recetas similares en YouTube", url_youtube)
 
-                # Editor dinámico por plato
-                with st.expander("✏️ Solicitar un cambio en este plato"):
-                    cambio_texto = st.text_input(
-                        "¿Qué quieres cambiar?",
-                        placeholder="Ej: Cambia las salchichas por huevo, hazlo sin sartén...",
-                        key=f"input_cambio_{idx}"
-                    )
-                    if st.button("Aplicar cambio a este plato", key=f"btn_cambio_{idx}"):
-                        if cambio_texto.strip():
-                            with st.spinner("Modificando este plato con el chef robot..."):
+                # Editor dinámico por plato (Ingredientes + Raciones)
+                with st.expander("✏️ Solicitar un cambio o ajustar comensales"):
+                    col_edit_txt, col_edit_rac = st.columns([3, 1])
+                    with col_edit_txt:
+                        cambio_texto = st.text_input(
+                            "¿Qué quieres cambiar?",
+                            placeholder="Ej: Cambia ingredientes, hazlo sin horno...",
+                            key=f"input_cambio_{idx}"
+                        )
+                    with col_edit_rac:
+                        nuevas_raciones = st.selectbox(
+                            "Raciones:",
+                            options=[1, 2, 3, 4, 5, 6],
+                            index=[1, 2, 3, 4, 5, 6].index(plato.raciones) if plato.raciones in [1, 2, 3, 4, 5, 6] else 1,
+                            key=f"select_rac_{idx}"
+                        )
+
+                    if st.button("Aplicar ajuste a este plato", key=f"btn_cambio_{idx}"):
+                        instruccion = cambio_texto.strip()
+                        ha_cambiado_raciones = (nuevas_raciones != plato.raciones)
+
+                        if instruccion or ha_cambiado_raciones:
+                            with st.spinner("Ajustando cantidades y receta con el chef robot..."):
                                 plato_modificado = modificar_plato(
                                     plato_actual=plato,
-                                    instruccion_cambio=cambio_texto,
+                                    instruccion_cambio=instruccion if instruccion else f"Recalcula los ingredientes para {nuevas_raciones} personas.",
                                     ingredientes_disponibles=st.session_state.get('ingredientes', ''),
-                                    despensa=despensa
+                                    despensa=despensa,
+                                    raciones_objetivo=nuevas_raciones if ha_cambiado_raciones else None
                                 )
                                 if plato_modificado:
                                     st.session_state['menu_objeto'].platos[idx] = plato_modificado
@@ -133,26 +154,7 @@ if archivos_subidos:
                                 else:
                                     st.error("No se pudo aplicar el cambio. Inténtalo de nuevo.")
                         else:
-                            st.warning("Escribe qué cambio deseas antes de pulsar el botón.")
-        # for plato in menu.platos:
-        #     with st.container(border=True):
-        #         col1, col2 = st.columns([3, 1])
-        #         with col1:
-        #             st.subheader(f"{plato.tipo_comida}: {plato.nombre}")
-        #         with col2:
-        #             st.caption(f"⏱️ **{plato.tiempo_preparacion_minutos} min** | 🎯 Dificultad: **{plato.dificultad}**")
-                
-        #         # st.write("**Ingredientes usados:**", ", ".join(plato.ingredientes_usados))
-        #         st.write("**Ingredientes usados:** " + " ".join(f"`{ing}`" for ing in plato.ingredientes_usados))
-        #         st.write("**Instrucciones de preparación:**")
-        #         for i, paso in enumerate(plato.pasos, 1):
-        #             st.write(f"{i}. {paso}")
-
-        #         # --- BOTÓN YOUTUBE ---
-        #         # query = urllib.parse.quote(f"receta {plato.nombre}")
-        #         query = urllib.parse.quote_plus(f"receta {plato.nombre}")
-        #         url_youtube = f"https://www.youtube.com/results?search_query={query}"
-        #         st.link_button("🎥 Ver recetas similares en YouTube", url_youtube)
+                            st.warning("Escribe una instrucción o selecciona un número diferente de raciones.")
 
         # Preparación de descargas (JSON, Markdown, PDF)
         st.markdown("---")
@@ -174,8 +176,11 @@ if archivos_subidos:
             md_text += f"## {p.tipo_comida}: {p.nombre}\n"
             md_text += f"- **Tiempo:** {p.tiempo_preparacion_minutos} min\n"
             md_text += f"- **Dificultad:** {p.dificultad}\n"
-            md_text += f"- **Ingredientes:** {', '.join(p.ingredientes_usados)}\n\n"
-            md_text += "### Pasos:\n"
+            md_text += f"- **Raciones:** {p.raciones} pers.\n"
+            md_text += "- **Ingredientes:**\n"
+            for ing in p.ingredientes_usados:
+                md_text += f"  - {ing.cantidad} de {ing.nombre}\n"
+            md_text += "\n### Pasos:\n"
             for i, paso in enumerate(p.pasos, 1):
                 md_text += f"{i}. {paso}\n"
             md_text += "\n---\n"

@@ -1,6 +1,6 @@
 # Proyecto Nevera IA
 
-Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes que tienes en casa a partir de fotos y propone un menú personalizado, con corrección manual de la lista detectada, filtros de dieta/tiempo/despensa, modificación dinámica de platos individuales, enlaces a recetas en vídeo y exportación del menú en PDF, JSON o Markdown. El proyecto evoluciona de forma incremental desde un modelo local hasta una arquitectura en la nube con visión artificial, salida estructurada en JSON e interfaz web interactiva.
+Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes que tienes en casa a partir de fotos y propone un menú personalizado, con corrección manual de la lista detectada, filtros de dieta/tiempo/despensa, modificación dinámica de platos individuales, escalado real de raciones con cantidades estructuradas, enlaces a recetas en vídeo y exportación del menú en PDF, JSON o Markdown. El proyecto evoluciona de forma incremental desde un modelo local hasta una arquitectura en la nube con visión artificial, salida estructurada en JSON e interfaz web interactiva.
 
 ---
 
@@ -17,21 +17,22 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 | v7 | Salida estructurada estricta (JSON) mediante esquemas **Pydantic**, renderizado dinámico en tarjetas con badges y descarga dual (JSON/MD). | Pydantic + Gemini 2.5 Flash (`Structured Outputs`) |
 | v8 | Interacción dinámica por plato (sustitución de ingredientes y cambios específicos sin regenerar todo el menú) y enlaces directos a vídeos de YouTube. | Pydantic + Gemini 2.5 Flash (`modificar_plato`) + Streamlit Expander |
 | v9 | Exportación del menú completo a PDF maquetado con `fpdf2`, sanitización de caracteres y descarga directa. | fpdf2 + Streamlit Download Button |
+| v10 | Cantidades estructuradas (`IngredienteReceta`), escalado dinámico de raciones/comensales por plato y exportación adaptada. | Pydantic (Nested Models) + Gemini 2.5 Flash + Streamlit |
 
 ---
 
-## Cómo funciona (v9)
+## Cómo funciona (v10)
 
 1. **Subida multimodal:** Subes una o varias fotos de tu nevera y despensa desde el navegador.
 2. **Fase 1 — Escaneo:** Gemini analiza las imágenes y devuelve una lista categorizada de todos los ingredientes detectados.
 3. **Corrección manual:** Puedes editar libremente esa lista antes de continuar para corregir posibles fallos de visión.
-4. **Fase 2 — Menú estructurado en JSON:** Con la lista confirmada y los filtros seleccionados (dieta, tiempo y despensa básica), Gemini genera un objeto validado por Pydantic con diagnóstico del chef, tiempos de cocción, dificultad, ingredientes e instrucciones detalladas.
-5. **Visualización y búsqueda multimedia:** Cada receta se dibuja en una tarjeta independiente con etiquetas (*badges*) para los ingredientes y un botón directo con búsqueda optimizada en YouTube.
-6. **Fase 3 — Modificación interactiva (Re-prompting granular):** Cada tarjeta incluye un desplegable para solicitar ajustes específicos (sustituir ingredientes, adaptar tiempos o técnicas). La app consulta a Gemini enviando únicamente el JSON de ese plato y actualiza la tarjeta al instante sin alterar las demás.
-7. **Descarga triple:** Permite exportar el menú completo en tres formatos independientes:
-   - **PDF:** Documento maquetado y listo para imprimir o consultar en móvil.
-   - **JSON:** Estructura tipada con metadatos para integración técnica.
-   - **Markdown:** Formato de texto limpio compatible con gestores de notas.
+4. **Fase 2 — Menú estructurado con cantidades:** Con la lista confirmada y los filtros seleccionados (dieta, tiempo y despensa básica), Gemini genera un objeto validado por Pydantic con diagnóstico del chef, tiempos de cocción, dificultad y una lista de ingredientes con cantidades orientativas estructuradas (`nombre` y `cantidad`).
+5. **Visualización y búsqueda multimedia:** Cada receta se dibuja en una tarjeta independiente que muestra comensales calculados (`👥 X pers.`), lista detallada de ingredientes por columnas con sus respectivas cantidades/unidades y un botón directo a YouTube con búsqueda optimizada.
+6. **Fase 3 — Modificación granular y escalado de comensales:** Cada tarjeta incluye un panel desplegable para solicitar ajustes libres (sustituir ingredientes, variar métodos) y/o seleccionar un nuevo número de raciones (1 a 6 personas). La app consulta a Gemini pasando el JSON del plato y recalcula matemáticamente los ingredientes, tiempos e instrucciones sin alterar las demás recetas.
+7. **Descarga triple sincronizada:** Exporta el menú completo con las cantidades y raciones actualizadas en tres formatos:
+   - **PDF:** Documento maquetado y limpio con `fpdf2`, apto para impresión.
+   - **JSON:** Estructura tipada con el esquema completo anidado.
+   - **Markdown:** Texto estructurado con viñetas de ingredientes y raciones.
 
 ---
 
@@ -77,7 +78,7 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 - [x] Interacción real: sustitución de ingredientes, ajuste de raciones
 - [x] Búsqueda de vídeos de YouTube relacionados con la receta
 - [x] Descarga del menú también en PDF
-- [ ] Ajuste dinámico de raciones con cantidades estructuradas (gramos/unidades)
+- [x] Ajuste dinámico de raciones con cantidades estructuradas (gramos/unidades)
 - [ ] Generación de imagen del plato final
 - [ ] Despliegue en la nube (Streamlit Community Cloud o similar)
 
@@ -100,4 +101,4 @@ proyecto-nevera-ia/
 
 ## Objetivo
 
-Proyecto de aprendizaje progresivo para explorar el ecosistema de IA generativa con Python: modelos locales, APIs multimodales, prompt engineering, esquemas Pydantic para structured outputs, re-prompting granular, generación documental (PDF), interfaces web y arquitectura limpia.
+Proyecto de aprendizaje progresivo para explorar el ecosistema de IA generativa con Python: modelos locales, APIs multimodales, prompt engineering, esquemas Pydantic anidados para structured outputs, re-prompting granular, escalado dinámico de datos, generación documental (PDF), interfaces web y arquitectura limpia.

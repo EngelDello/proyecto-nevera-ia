@@ -13,14 +13,19 @@ api_key = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=api_key) if api_key else None
 
-# --- ESQUEMA DE SALIDA ESTRUCTURADA (JSON) ---
+# --- ESQUEMAS DE SALIDA ESTRUCTURADA (PYDANTIC) ---
+
+class IngredienteReceta(BaseModel):
+    nombre: str = Field(description="Nombre del ingrediente")
+    cantidad: str = Field(description="Cantidad orientativa con su unidad, ej: '4 unidades', '200 g', '1 pizca', 'al gusto'")
+
 class Plato(BaseModel):
     nombre: str = Field(description="Nombre descriptivo del plato")
     tipo_comida: str = Field(description="Desayuno, Almuerzo o Cena")
     tiempo_preparacion_minutos: int = Field(description="Tiempo estimado de preparación en minutos")
     dificultad: str = Field(description="Baja, Media o Alta")
-    #raciones: int = Field(default=2, description="Número de personas para las que está calculada la receta")
-    ingredientes_usados: List[str] = Field(description="Ingredientes de la lista confirmada o despensa usados")
+    raciones: int = Field(default=2, description="Número de personas para las que están calculadas las cantidades de la receta")
+    ingredientes_usados: List[IngredienteReceta] = Field(description="Lista de ingredientes con sus cantidades orientativas")
     pasos: List[str] = Field(description="Pasos cronológicos de preparación")
 
 class MenuCompleto(BaseModel):
@@ -45,7 +50,7 @@ def identificar_ingredientes(imagenes):
     except Exception as e:
         return f"Error al conectar con Gemini: {e}"
 
-# FASE 2: Generar menú con formato JSON estricto
+# FASE 2: Generar menú con formato JSON estricto y cantidades orientativas
 def generar_receta_con_filtros(ingredientes_texto, despensa, dieta, tiempo_cocina, intentos=3):
     if not client:
         return None
@@ -57,10 +62,12 @@ def generar_receta_con_filtros(ingredientes_texto, despensa, dieta, tiempo_cocin
     - Tiempo disponible: {tiempo_cocina}
     - Ingredientes básicos de despensa disponibles: {despensa}
     
-    Debes diseñar un menú óptimo (Desayuno, Almuerzo, Cena) usando ÚNICAMENTE los ingredientes confirmados 
-    y respetando estrictamente las restricciones del usuario."""
+    Reglas de cálculo:
+    - Diseña un menú óptimo (Desayuno, Almuerzo, Cena) usando ÚNICAMENTE los ingredientes confirmados.
+    - Por defecto, calcula las recetas para 2 raciones (2 personas).
+    - Asigna cantidades plausibles y realistas a cada ingrediente (ej. gramos, unidades, cucharadas)."""
     
-    prompt = f"Aquí tienes la lista confirmada de ingredientes disponibles:\n\n{ingredientes_texto}\n\nGenera el menú completo."
+    prompt = f"Aquí tienes la lista confirmada de ingredientes disponibles:\n\n{ingredientes_texto}\n\nGenera el menú completo con cantidades estructuradas."
     
     for intento in range(intentos):
         try:
@@ -73,7 +80,6 @@ def generar_receta_con_filtros(ingredientes_texto, despensa, dieta, tiempo_cocin
                 ),
                 contents=[prompt]
             )
-            # Convertimos la respuesta JSON a un objeto Python tipado
             return MenuCompleto.model_validate_json(respuesta.text)
         except Exception as e:
             if "503" in str(e) and intento < intentos - 1:
@@ -81,8 +87,8 @@ def generar_receta_con_filtros(ingredientes_texto, despensa, dieta, tiempo_cocin
                 continue
             return None
 
-# FASE 3: Modificar un plato individual manteniendo el esquema
-def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_disponibles: str, despensa: str, intentos=3):
+# FASE 3: Modificar un plato individual manteniendo el esquema y cantidades
+def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_disponibles: str, despensa: str, raciones_objetivo: int = None, intentos=3):
     if not client:
         return None
 
@@ -92,15 +98,18 @@ def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_d
     Reglas estrictas:
     - Mantén la coherencia con los ingredientes disponibles confirmados: {ingredientes_disponibles}
     - Ingredientes básicos de despensa: {despensa}
-    - Aplica la instrucción solicitada por el usuario de forma precisa."""
+    - Aplica la instrucción solicitada de forma precisa.
+    - Si se solicita cambiar las raciones, recalcula proporcionalmente las cantidades de cada ingrediente y adapta los pasos si los tiempos o métodos varían."""
+
+    extra_raciones = f"\nAjusta las raciones exactamente a: {raciones_objetivo} personas y recalcula todas las cantidades." if raciones_objetivo else ""
 
     prompt = f"""Plato actual (formato JSON):
-    {plato_actual.model_dump_json(indent=2)}
+{plato_actual.model_dump_json(indent=2)}
 
-    Instrucción de cambio del usuario:
-    "{instruccion_cambio}"
+Instrucción de cambio del usuario:
+"{instruccion_cambio}"{extra_raciones}
 
-    Devuelve el plato modificado en el mismo formato estructurado."""
+Devuelve el plato modificado en el mismo formato estructurado."""
 
     for intento in range(intentos):
         try:
@@ -109,7 +118,7 @@ def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_d
                 config=types.GenerateContentConfig(
                     system_instruction=reglas_chef,
                     response_mime_type="application/json",
-                    response_schema=Plato,  # Forzamos a devolver un único objeto Plato
+                    response_schema=Plato,
                 ),
                 contents=[prompt]
             )
@@ -119,6 +128,8 @@ def modificar_plato(plato_actual: Plato, instruccion_cambio: str, ingredientes_d
                 time.sleep(2)
                 continue
             return None
+
+# --- EXPORTACIÓN A PDF ---
 
 def limpiar_texto_pdf(texto: str) -> str:
     """Sanea el texto eliminando caracteres tipográficos incompatibles con Latin-1."""
@@ -130,7 +141,6 @@ def limpiar_texto_pdf(texto: str) -> str:
     }
     for orig, nuevo in reemplazos.items():
         texto = texto.replace(orig, nuevo)
-    # Conserva caracteres españoles estándar (tildes, ñ) y descarta caracteres no soportados
     return texto.encode('latin-1', 'replace').decode('latin-1')
 
 class PDFMenu(FPDF):
@@ -148,9 +158,8 @@ def generar_pdf_menu(menu: MenuCompleto) -> bytes:
     pdf = PDFMenu()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    pdf.ln(4)  # Separa el contenido del encabezado
+    pdf.ln(4)
     
-    # Ancho efectivo de la página (evita cualquier error de espacio horizontal)
     ancho_util = pdf.epw
     
     # Diagnóstico del chef
@@ -167,16 +176,18 @@ def generar_pdf_menu(menu: MenuCompleto) -> bytes:
         pdf.set_font('Helvetica', 'B', 13)
         pdf.cell(ancho_util, 8, limpiar_texto_pdf(f"{plato.tipo_comida}: {plato.nombre}"), new_x="LMARGIN", new_y="NEXT")
         
-        # Metadatos
+        # Metadatos (incluye raciones)
         pdf.set_font('Helvetica', 'I', 9)
-        pdf.cell(ancho_util, 5, limpiar_texto_pdf(f"Tiempo: {plato.tiempo_preparacion_minutos} min  |  Dificultad: {plato.dificultad}"), new_x="LMARGIN", new_y="NEXT")
+        info_meta = f"Tiempo: {plato.tiempo_preparacion_minutos} min  |  Dificultad: {plato.dificultad}  |  Raciones: {plato.raciones} pers."
+        pdf.cell(ancho_util, 5, limpiar_texto_pdf(info_meta), new_x="LMARGIN", new_y="NEXT")
         pdf.ln(2)
         
-        # Ingredientes
+        # Ingredientes con cantidades
         pdf.set_font('Helvetica', 'B', 10)
-        pdf.cell(ancho_util, 6, "Ingredientes:", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(ancho_util, 6, "Ingredientes usados:", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font('Helvetica', '', 9)
-        pdf.multi_cell(ancho_util, 5, limpiar_texto_pdf(", ".join(plato.ingredientes_usados)))
+        texto_ingredientes = ", ".join(f"{ing.nombre} ({ing.cantidad})" for ing in plato.ingredientes_usados)
+        pdf.multi_cell(ancho_util, 5, limpiar_texto_pdf(texto_ingredientes))
         pdf.ln(2)
         
         # Pasos
