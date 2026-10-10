@@ -2,13 +2,14 @@ import streamlit as st
 from urllib.parse import quote_plus
 from PIL import Image
 from nevera import (
-    identificar_ingredientes, 
-    generar_receta_con_filtros, 
-    modificar_plato, 
-    generar_pdf_menu, 
-    MenuCompleto, 
+    MenuCompleto,
     Plato,
-    IngredienteReceta
+    IngredienteReceta,
+    identificar_ingredientes,
+    generar_receta_con_filtros,
+    modificar_plato,
+    generar_pdf_menu,
+    generar_imagen_plato
 )
 
 st.set_page_config(page_title="Asistente de Nevera IA", page_icon="🍳", layout="wide")
@@ -67,10 +68,6 @@ if imagenes_pil:
     for idx, img in enumerate(imagenes_pil):
         cols[idx % 4].image(img, use_container_width=True)
     
-    cols = st.columns(len(imagenes_pil))
-    for idx, img in enumerate(imagenes_pil):
-        cols[idx].image(img, use_container_width=True)
-
     # PASO 1: ESCANEAR
     if st.button("🔍 1. Escanear e Identificar Ingredientes"):
         with st.spinner("Analizando imágenes de la nevera..."):
@@ -132,6 +129,26 @@ if imagenes_pil:
                 query = quote_plus(f"receta {plato.nombre}")
                 url_youtube = f"https://www.youtube.com/results?search_query={query}"
                 st.link_button("🎥 Ver recetas similares en YouTube", url_youtube)
+
+                # Generación de imagen con IA
+                if "imagenes_platos" not in st.session_state:
+                    st.session_state.imagenes_platos = {}
+
+                if plato.nombre in st.session_state.imagenes_platos:
+                    st.image(
+                        st.session_state.imagenes_platos[plato.nombre],
+                        caption=f"Presentación sugerida: {plato.nombre}",
+                        use_container_width=True
+                    )
+                else:
+                    if st.button("📸 Generar foto del plato con IA", key=f"btn_img_{idx}"):
+                        with st.spinner("Generando fotografía del plato con Imagen 3..."):
+                            img_generada = generar_imagen_plato(plato.nombre)
+                            if img_generada:
+                                st.session_state.imagenes_platos[plato.nombre] = img_generada
+                                st.rerun()
+                            else:
+                                st.error("No se pudo generar la imagen. Revisa la facturación de tu API Key.")
 
                 # Editor dinámico por plato (Ingredientes + Raciones)
                 with st.expander("✏️ Solicitar un cambio o ajustar comensales"):

@@ -7,6 +7,8 @@ from google import genai
 from google.genai import types
 import unicodedata
 from fpdf import FPDF
+import io
+from PIL import Image
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -203,3 +205,27 @@ def generar_pdf_menu(menu: MenuCompleto) -> bytes:
         pdf.ln(4)
 
     return bytes(pdf.output())
+
+def generar_imagen_plato(nombre_plato: str) -> Image.Image | None:
+    """
+    Genera una fotografía del plato terminado usando gemini-2.5-flash-image.
+    """
+    prompt = (
+        f"Generate a professional, appetizing food photograph of '{nombre_plato}', "
+        "freshly cooked, beautifully plated on a restaurant table, soft warm lighting."
+    )
+    
+    try:
+        res = client.models.generate_content(
+            model="gemini-2.5-flash-image",
+            contents=prompt
+        )
+        if res.candidates and res.candidates[0].content.parts:
+            for part in res.candidates[0].content.parts:
+                if hasattr(part, "inline_data") and part.inline_data:
+                    return Image.open(io.BytesIO(part.inline_data.data))
+    except Exception as e:
+        print(f"Error generando imagen del plato: {e}")
+        return None
+        
+    return None

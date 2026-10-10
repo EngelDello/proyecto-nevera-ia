@@ -19,18 +19,19 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 | v9 | Exportación del menú completo a PDF maquetado con `fpdf2`, sanitización de caracteres y descarga directa. | fpdf2 + Streamlit Download Button |
 | v10 | Cantidades estructuradas (`IngredienteReceta`), escalado dinámico de raciones/comensales por plato y exportación adaptada. | Pydantic (Nested Models) + Gemini 2.5 Flash + Streamlit |
 | v10.1 | Modo dual de entrada fotográfica: selector de pestañas para subida de archivos o captura directa desde cámara web/móvil (`st.camera_input`). | Streamlit Tabs + Camera Input |
-
+| v11 | Generación de fotografías realistas del plato terminado bajo demanda con IA y almacenamiento en caché de sesión (`st.session_state`). | Gemini 2.5 Flash Image API + Streamlit Session State |
 ---
 
-## Cómo funciona (v10.1)
+## Cómo funciona (v11)
 
 1. **Subida multimodal dual:** Subes una o varias fotos desde tu dispositivo o capturas fotos en directo con la cámara web/móvil mediante pestañas dedicadas.
 2. **Fase 1 — Escaneo:** Gemini analiza las imágenes y devuelve una lista categorizada de todos los ingredientes detectados.
 3. **Corrección manual:** Puedes editar libremente esa lista antes de continuar para corregir posibles fallos de visión.
 4. **Fase 2 — Menú estructurado con cantidades:** Con la lista confirmada y los filtros seleccionados (dieta, tiempo y despensa básica), Gemini genera un objeto validado por Pydantic con diagnóstico del chef, tiempos de cocción, dificultad y una lista de ingredientes con cantidades orientativas estructuradas (`nombre` y `cantidad`).
 5. **Visualización y búsqueda multimedia:** Cada receta se dibuja en una tarjeta independiente que muestra comensales calculados (`👥 X pers.`), lista detallada de ingredientes por columnas con sus respectivas cantidades/unidades y un botón directo a YouTube con búsqueda optimizada.
-6. **Fase 3 — Modificación granular y escalado de comensales:** Cada tarjeta incluye un panel desplegable para solicitar ajustes libres (sustituir ingredientes, variar métodos) y/o seleccionar un nuevo número de raciones (1 a 6 personas). La app consulta a Gemini pasando el JSON del plato y recalcula matemáticamente los ingredientes, tiempos e instrucciones sin alterar las demás recetas.
-7. **Descarga triple sincronizada:** Exporta el menú completo con las cantidades y raciones actualizadas en tres formatos:
+6. **Generación de imagen del plato con IA:** Cada tarjeta permite generar bajo demanda una fotografía realista del plato emplatado utilizando `gemini-2.5-flash-image`. Las imágenes generadas se conservan en `st.session_state` para evitar consumos redundantes de cuota.
+7. **Fase 3 — Modificación granular y escalado de comensales:** Cada tarjeta incluye un panel desplegable para solicitar ajustes libres (sustituir ingredientes, variar métodos) y/o seleccionar un nuevo número de raciones (1 a 6 personas). La app consulta a Gemini pasando el JSON del plato y recalcula matemáticamente los ingredientes, tiempos e instrucciones sin alterar las demás recetas.
+8. **Descarga triple sincronizada:** Exporta el menú completo con las cantidades y raciones actualizadas en tres formatos:
    - **PDF:** Documento maquetado y limpio con `fpdf2`, apto para impresión.
    - **JSON:** Estructura tipada con el esquema completo anidado.
    - **Markdown:** Texto estructurado con viñetas de ingredientes y raciones.
@@ -81,7 +82,7 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 - [x] Descarga del menú también en PDF
 - [x] Ajuste dinámico de raciones con cantidades estructuradas (gramos/unidades)
 - [x] Modo dual de entrada fotográfica con soporte de cámara (`st.camera_input`)
-- [ ] Generación de imagen del plato final
+- [x] Generación de imagen del plato final
 - [ ] Despliegue en la nube (Streamlit Community Cloud o similar)
 
 ---
@@ -90,8 +91,8 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 
 ```text
 proyecto-nevera-ia/
-├── app.py            # Interfaz web (Streamlit): pestañas de subida/cámara, tarjetas interactivas, editor de raciones y descargas
-├── nevera.py         # Backend: esquemas Pydantic (Plato, MenuCompleto), identificar_ingredientes(), generar_receta_con_filtros() y modificar_plato()
+├── app.py            # Interfaz web (Streamlit): pestañas de subida/cámara, tarjetas interactivas, generación visual, editor de raciones y descargas
+├── nevera.py         # Backend: esquemas Pydantic (Plato, MenuCompleto), identificar_ingredientes(), generar_receta_con_filtros(), modificar_plato() y generar_imagen_plato()
 ├── images/           # Imágenes de ejemplo de la nevera
 ├── requirements.txt  # Lista de dependencias (google-genai, streamlit, pydantic, pillow, python-dotenv)
 ├── README.md
