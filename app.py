@@ -41,16 +41,31 @@ if st.sidebar.button("🔄 Reiniciar / Nueva Receta", use_container_width=True):
     st.rerun()
 
 # --- ZONA PRINCIPAL ---
-st.write("Sube las fotos de tu nevera para comenzar la detección.")
+st.write("Añade fotos de tu nevera para comenzar la detección.")
 
-archivos_subidos = st.file_uploader(
-    "Selecciona imágenes...",
-    type=["jpg", "jpeg", "png"],
-    accept_multiple_files=True
-)
+tab_archivos, tab_camara = st.tabs(["📁 Subir archivos", "📸 Usar cámara"])
 
-if archivos_subidos:
-    imagenes_pil = [Image.open(f) for f in archivos_subidos]
+imagenes_pil = []
+
+with tab_archivos:
+    archivos_subidos = st.file_uploader(
+        "Selecciona una o varias imágenes...",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True,
+        key="uploader_archivos"
+    )
+    if archivos_subidos:
+        imagenes_pil.extend([Image.open(f) for f in archivos_subidos])
+
+with tab_camara:
+    foto_camara = st.camera_input("Haz una foto a la nevera o despensa", key="camara_input")
+    if foto_camara:
+        imagenes_pil.append(Image.open(foto_camara))
+
+if imagenes_pil:
+    cols = st.columns(min(len(imagenes_pil), 4))
+    for idx, img in enumerate(imagenes_pil):
+        cols[idx % 4].image(img, use_container_width=True)
     
     cols = st.columns(len(imagenes_pil))
     for idx, img in enumerate(imagenes_pil):

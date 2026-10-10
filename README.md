@@ -18,12 +18,13 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 | v8 | Interacción dinámica por plato (sustitución de ingredientes y cambios específicos sin regenerar todo el menú) y enlaces directos a vídeos de YouTube. | Pydantic + Gemini 2.5 Flash (`modificar_plato`) + Streamlit Expander |
 | v9 | Exportación del menú completo a PDF maquetado con `fpdf2`, sanitización de caracteres y descarga directa. | fpdf2 + Streamlit Download Button |
 | v10 | Cantidades estructuradas (`IngredienteReceta`), escalado dinámico de raciones/comensales por plato y exportación adaptada. | Pydantic (Nested Models) + Gemini 2.5 Flash + Streamlit |
+| v10.1 | Modo dual de entrada fotográfica: selector de pestañas para subida de archivos o captura directa desde cámara web/móvil (`st.camera_input`). | Streamlit Tabs + Camera Input |
 
 ---
 
-## Cómo funciona (v10)
+## Cómo funciona (v10.1)
 
-1. **Subida multimodal:** Subes una o varias fotos de tu nevera y despensa desde el navegador.
+1. **Subida multimodal dual:** Subes una o varias fotos desde tu dispositivo o capturas fotos en directo con la cámara web/móvil mediante pestañas dedicadas.
 2. **Fase 1 — Escaneo:** Gemini analiza las imágenes y devuelve una lista categorizada de todos los ingredientes detectados.
 3. **Corrección manual:** Puedes editar libremente esa lista antes de continuar para corregir posibles fallos de visión.
 4. **Fase 2 — Menú estructurado con cantidades:** Con la lista confirmada y los filtros seleccionados (dieta, tiempo y despensa básica), Gemini genera un objeto validado por Pydantic con diagnóstico del chef, tiempos de cocción, dificultad y una lista de ingredientes con cantidades orientativas estructuradas (`nombre` y `cantidad`).
@@ -79,6 +80,7 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 - [x] Búsqueda de vídeos de YouTube relacionados con la receta
 - [x] Descarga del menú también en PDF
 - [x] Ajuste dinámico de raciones con cantidades estructuradas (gramos/unidades)
+- [x] Modo dual de entrada fotográfica con soporte de cámara (`st.camera_input`)
 - [ ] Generación de imagen del plato final
 - [ ] Despliegue en la nube (Streamlit Community Cloud o similar)
 
@@ -88,7 +90,7 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 
 ```text
 proyecto-nevera-ia/
-├── app.py            # Interfaz web (Streamlit): tarjetas visuales, badges, flujo 2 fases, descargas
+├── app.py            # Interfaz web (Streamlit): pestañas de subida/cámara, tarjetas interactivas, editor de raciones y descargas
 ├── nevera.py         # Backend: esquemas Pydantic (Plato, MenuCompleto), identificar_ingredientes(), generar_receta_con_filtros() y modificar_plato()
 ├── images/           # Imágenes de ejemplo de la nevera
 ├── requirements.txt  # Lista de dependencias (google-genai, streamlit, pydantic, pillow, python-dotenv)
