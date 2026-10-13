@@ -163,10 +163,17 @@ if imagenes_pil:
                     st.session_state.imagenes_platos = {}
 
                 if plato.nombre in st.session_state.imagenes_platos:
-                    st.image(
-                        st.session_state.imagenes_platos[plato.nombre],
-                        caption=f"Presentación sugerida: {plato.nombre}",
-                        use_container_width=True
+                    buf_plato = io.BytesIO()
+                    st.session_state.imagenes_platos[plato.nombre].save(buf_plato, format="JPEG")
+                    b64_plato = base64.b64encode(buf_plato.getvalue()).decode()
+                    st.markdown(
+                        f'''
+                        <div style="margin: 10px 0;">
+                            <img src="data:image/jpeg;base64,{b64_plato}" style="width:100%; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <p style="text-align: center; color: gray; font-size: 0.9em; margin-top: 5px;">Presentación sugerida: {plato.nombre}</p>
+                        </div>
+                        ''',
+                        unsafe_allow_html=True
                     )
                 else:
                     if st.button("📸 Generar foto del plato con IA", key=f"btn_img_{idx}"):
