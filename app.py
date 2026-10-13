@@ -26,14 +26,16 @@ if password_correcta:
 
     if not st.session_state.autenticado:
         st.title("🔒 Acceso protegido")
-        pwd_input = st.text_input("Introduce la contraseña de acceso:", type="password")
-        if st.button("Entrar"):
-            if pwd_input == password_correcta:
-                st.session_state.autenticado = True
-                st.rerun()
-            else:
-                st.error("Contraseña incorrecta.")
-        st.stop()  # Detiene la ejecución aquí si no está autenticado
+        with st.form("form_login"):
+            pwd_input = st.text_input("Introduce la contraseña de acceso:", type="password")
+            submit = st.form_submit_button("Entrar")
+            if submit:
+                if pwd_input == password_correcta:
+                    st.session_state.autenticado = True
+                    st.rerun()
+                else:
+                    st.error("Contraseña incorrecta.")
+        st.stop()
 # -------------------------
 
 st.title("🍳 Asistente de Cocina IA (Multimodal)")
