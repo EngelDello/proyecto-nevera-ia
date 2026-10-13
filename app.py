@@ -86,7 +86,7 @@ with tab_camara:
 if imagenes_pil:
     cols = st.columns(min(len(imagenes_pil), 4))
     for idx, img in enumerate(imagenes_pil):
-        cols[idx % 4].image(img, use_container_width=True)
+        cols[idx % 4].image(img, caption="", use_container_width=True)
     
     # PASO 1: ESCANEAR
     if st.button("🔍 1. Escanear e Identificar Ingredientes"):
