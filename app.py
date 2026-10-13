@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from urllib.parse import quote_plus
 from PIL import Image
 from nevera import (
@@ -13,6 +14,25 @@ from nevera import (
 )
 
 st.set_page_config(page_title="Asistente de Nevera IA", page_icon="🍳", layout="wide")
+
+# --- CONTROL DE ACCESO ---
+password_correcta = os.getenv("APP_PASSWORD")
+
+if password_correcta:
+    if "autenticado" not in st.session_state:
+        st.session_state.autenticado = False
+
+    if not st.session_state.autenticado:
+        st.title("🔒 Acceso protegido")
+        pwd_input = st.text_input("Introduce la contraseña de acceso:", type="password")
+        if st.button("Entrar"):
+            if pwd_input == password_correcta:
+                st.session_state.autenticado = True
+                st.rerun()
+            else:
+                st.error("Contraseña incorrecta.")
+        st.stop()  # Detiene la ejecución aquí si no está autenticado
+# -------------------------
 
 st.title("🍳 Asistente de Cocina IA (Multimodal)")
 
