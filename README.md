@@ -4,6 +4,15 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 
 ---
 
+## 🌐 Demo en Vivo
+
+Puedes probar la aplicación desplegada en la nube aquí:  
+👉 **[Asistente de Nevera IA en Streamlit Cloud](https://proyecto-nevera-ia-nan6bqsvltpxymk5wpwx5h.streamlit.app/)**[cite: 4]
+
+> 🔒 **Nota:** La aplicación cuenta con autenticación por contraseña para proteger la cuota de la API de Google Gemini.
+
+---
+
 ## Evolución del proyecto
 
 | Versión | Descripción | Tecnología |
@@ -20,6 +29,7 @@ Asistente de cocina inteligente desarrollado en Python. Analiza los ingredientes
 | v10 | Cantidades estructuradas (`IngredienteReceta`), escalado dinámico de raciones/comensales por plato y exportación adaptada. | Pydantic (Nested Models) + Gemini 2.5 Flash + Streamlit |
 | v10.1 | Modo dual de entrada fotográfica: selector de pestañas para subida de archivos o captura directa desde cámara web/móvil (`st.camera_input`). | Streamlit Tabs + Camera Input |
 | v11 | Generación de fotografías realistas del plato terminado bajo demanda con IA y almacenamiento en caché de sesión (`st.session_state`). | Gemini 2.5 Flash Image API + Streamlit Session State |
+| v12 | Despliegue en Streamlit Community Cloud, control de acceso por contraseña con `st.form` y renderizado seguro Base64 para imágenes remotas. | Streamlit Community Cloud + Secrets + Base64 |
 ---
 
 ## Cómo funciona (v11)
@@ -63,6 +73,7 @@ pip install -r requirements.txt
 
 # 3. Crea el archivo .env con tu clave de API
 echo "GEMINI_API_KEY=tu_clave_aqui" > .env
+echo "APP_PASSWORD=tu_contraseña_aqui" >> .env
 
 # 4. Ejecuta la app web
 streamlit run app.py
@@ -83,7 +94,7 @@ Esto abrirá la aplicación en tu navegador en `http://localhost:8501`.
 - [x] Ajuste dinámico de raciones con cantidades estructuradas (gramos/unidades)
 - [x] Modo dual de entrada fotográfica con soporte de cámara (`st.camera_input`)
 - [x] Generación de imagen del plato final
-- [ ] Despliegue en la nube (Streamlit Community Cloud o similar)
+- [x] Despliegue en la nube (Streamlit Community Cloud o similar)
 
 ---
 
