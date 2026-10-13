@@ -1,5 +1,7 @@
 import streamlit as st
 import os
+import io
+import base64
 from urllib.parse import quote_plus
 from PIL import Image
 from nevera import (
@@ -86,7 +88,13 @@ with tab_camara:
 if imagenes_pil:
     cols = st.columns(min(len(imagenes_pil), 4))
     for idx, img in enumerate(imagenes_pil):
-        cols[idx % 4].image(img, caption="", use_container_width=True)
+        buffered = io.BytesIO()
+        img.save(buffered, format="JPEG")
+        img_b64 = base64.b64encode(buffered.getvalue()).decode()
+        cols[idx % 4].markdown(
+            f'<img src="data:image/jpeg;base64,{img_b64}" style="width:100%; border-radius:8px; margin-bottom:10px;">',
+            unsafe_allow_html=True
+        )
     
     # PASO 1: ESCANEAR
     if st.button("🔍 1. Escanear e Identificar Ingredientes"):
